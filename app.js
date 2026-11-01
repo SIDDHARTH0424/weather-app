@@ -30,8 +30,53 @@ async function getWeather(latitude, longitude) {
   return response.json();
 }
 
-// Quick test: open the page, then check the browser Console
-getCoordinates("London")
-  .then((c) => getWeather(c.latitude, c.longitude))
-  .then((w) => console.log(w))
-  .catch((e) => console.error(e.message));
+const form = document.getElementById("searchForm");
+const cityInput = document.getElementById("cityInput");
+const statusEl = document.getElementById("status");
+const resultEl = document.getElementById("result");
+const searchBtn = form.querySelector("button");
+
+function showLoading() {
+  statusEl.textContent = "Loading...";
+  statusEl.className = "status loading";
+  resultEl.hidden = true;
+  searchBtn.disabled = true;
+}
+
+function showError(message) {
+  statusEl.textContent = message;
+  statusEl.className = "status error";
+  resultEl.hidden = true;
+}
+
+function showResult(label, weather) {
+  const { current, daily } = weather;
+  document.getElementById("cityName").textContent = label;
+  document.getElementById("temp").textContent = `${Math.round(current.temperature_2m)}°C`;
+  document.getElementById("condition").textContent =
+    WEATHER_CODES[current.weather_code] || "Unknown conditions";
+  document.getElementById("humidity").textContent = `${current.relative_humidity_2m}%`;
+  document.getElementById("wind").textContent = `${current.wind_speed_10m} km/h`;
+  document.getElementById("range").textContent =
+    `${Math.round(daily.temperature_2m_max[0])}° / ${Math.round(daily.temperature_2m_min[0])}°`;
+  statusEl.textContent = "";
+  statusEl.className = "status";
+  resultEl.hidden = false;
+}
+
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const city = cityInput.value.trim();
+  if (!city) return;
+
+  showLoading();
+  try {
+    const place = await getCoordinates(city);
+    const weather = await getWeather(place.latitude, place.longitude);
+    showResult(place.label, weather);
+  } catch (error) {
+    showError(error.message || "Something went wrong.");
+  } finally {
+    searchBtn.disabled = false;
+  }
+});
